@@ -1,0 +1,20 @@
+## Benchmark Results
+
+The table below reports raw extraction performance before outlier filtering or quality-gating. Values are in RM billion.
+
+| Metric | Zephyr-7B | Mistral-7B | Better |
+|---|---:|---:|---|
+| Exports MAE | 9.90 | 20.07 | Zephyr-7B |
+| Exports RMSE | 25.20 | 111.32 | Zephyr-7B |
+| Imports MAE | 7.30 | 16.56 | Zephyr-7B |
+| Imports RMSE | 21.57 | 93.33 | Zephyr-7B |
+| Trade Balance MAE | 3.93e9 | 2.70e10 | Zephyr-7B |
+| Trade Balance RMSE | 1.81e10 | 1.96e11 | Zephyr-7B |
+| Total Trade MAE | 19.85 | 43.85 | Zephyr-7B |
+| Total Trade RMSE | 51.74 | 205.66 | Zephyr-7B |
+
+## Key Finding
+
+Zephyr-7B outperformed Mistral-7B across the raw benchmark metrics. However, both models produced severe outlier errors caused by unit-conversion and parsing failures, especially for trade balance values.
+
+This indicates that LLM extraction should not be used directly without validation. A reliable workflow requires JSON validation, unit normalization, logical consistency checks, and outlier detection before downstream use.

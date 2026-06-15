@@ -209,6 +209,10 @@ The benchmark tracks common LLM extraction failure modes:
 | Logical inconsistency | Exports + imports does not match total trade                     | Low trust in answer          |
 | OCR corruption        | PDF text extraction corrupts currency or numeric values          | Wrong downstream extraction  |
 
+Detailed benchmark report: [`outputs/benchmarks/benchmark_summary.md`](outputs/benchmarks/benchmark_summary.md)
+
+Raw metrics CSV: [`outputs/benchmarks/raw_benchmark_metrics.csv`](outputs/benchmarks/raw_benchmark_metrics.csv)
+
 ## Model Selection Framing
 
 The final model recommendation is based on the product priority:

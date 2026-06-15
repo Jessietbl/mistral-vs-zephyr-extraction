@@ -2,12 +2,6 @@
 
 ## Overview
 
-This project evaluates open-source 7B-parameter instruction models for extracting structured economic indicators from noisy Malaysian trade statistics PDF reports.
-
-The project is framed as a model-quality evaluation workflow: PDF ingestion, OCR-aware text extraction, prompt-based structured extraction, JSON validation, numeric consistency checks, benchmark evaluation, and executive model-selection recommendations.
-
-## Executive Summary
-
 This project evaluates whether lightweight open-source 7B instruction models can reliably extract structured economic indicators from noisy PDF reports.
 
 The evaluation focuses on:
@@ -19,6 +13,14 @@ The evaluation focuses on:
 * suitability for downstream analytics workflows
 
 The project demonstrates a practical model-quality evaluation workflow similar to those used when assessing LLM-powered product features before deployment.
+
+## Executive Summary
+
+Zephyr-7B produced lower raw extraction error than Mistral-7B across exports, imports, trade balance, and total trade fields.
+
+However, the benchmark also revealed that both models are vulnerable to severe unit-normalization failures. Some trade balance values were parsed at raw RM scale instead of RM billion scale, causing extremely large outlier errors.
+
+The main product lesson is that model choice alone is insufficient. Structured LLM extraction requires validation layers, including unit checks, logical consistency checks, and confidence-based routing for human review.
 
 
 ## Models Evaluated
@@ -184,9 +186,13 @@ The table below reports raw extraction performance before outlier filtering or q
 | Total Trade MAE | 19.85 | 43.85 | Zephyr-7B |
 | Total Trade RMSE | 51.74 | 205.66 | Zephyr-7B |
 
+## Benchmark Note
+
+The current benchmark should be interpreted as a pipeline-level comparison rather than a pure model-only comparison. Differences may reflect both model behaviour and extraction pipeline handling, including JSON parsing, fallback behaviour, and unit normalization.
+
 ## Key Finding
 
-Zephyr-7B outperformed Mistral-7B across the raw benchmark metrics. However, both models produced severe outlier errors caused by unit-conversion and parsing failures, especially for trade balance values.
+Zephyr performed better in this raw benchmark, but both models require validation and quality gates before production use.
 
 This indicates that LLM extraction should not be used directly without validation. A reliable workflow requires JSON validation, unit normalization, logical consistency checks, and outlier detection before downstream use.
 

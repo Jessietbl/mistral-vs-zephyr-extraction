@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project evaluates whether lightweight open-source 7B instruction models can reliably extract structured economic indicators from noisy PDF reports.
+Evaluating Small Language Models for Reliable Structured Data Extraction Under Resource-Constrained Deployment Conditions. 
 
 The evaluation focuses on:
 
@@ -11,6 +11,17 @@ The evaluation focuses on:
 * robustness to OCR noise
 * logical consistency of extracted values
 * suitability for downstream analytics workflows
+
+Evaluated four deployable open-source models under a strict
+single-GPU Colab budget.
+
+Investigated:
+- extraction accuracy
+- JSON validity
+- OCR robustness
+- cost-performance tradeoffs
+- failure modes
+- validation strategies
 
 The project demonstrates a practical model-quality evaluation workflow similar to those used when assessing LLM-powered product features before deployment.
 
@@ -284,6 +295,22 @@ reports/model_quality_report.md
 * OCR quality materially affects extraction accuracy.
 * This project demonstrates model evaluation, not production deployment.
 * Larger-scale evaluation would be needed before production use.
+
+## Deployment Constraint
+
+The benchmark was intentionally restricted to models that can run on free or low-cost Google Colab environments.
+
+Hardware:
+- Google Colab T4 GPU
+- ~15 GB VRAM
+
+Model Requirements:
+- Single-GPU execution
+- 4-bit quantization
+- No distributed inference
+- No API-based commercial models
+
+The objective was to evaluate extraction quality under realistic resource constraints rather than maximize absolute performance.
 
 ## Future Work
 

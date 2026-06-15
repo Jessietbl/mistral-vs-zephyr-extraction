@@ -6,6 +6,21 @@ This project evaluates open-source 7B-parameter instruction models for extractin
 
 The project is framed as a model-quality evaluation workflow: PDF ingestion, OCR-aware text extraction, prompt-based structured extraction, JSON validation, numeric consistency checks, benchmark evaluation, and executive model-selection recommendations.
 
+## Executive Summary
+
+This project evaluates whether lightweight open-source 7B instruction models can reliably extract structured economic indicators from noisy PDF reports.
+
+The evaluation focuses on:
+
+* structured output reliability
+* numeric extraction accuracy
+* robustness to OCR noise
+* logical consistency of extracted values
+* suitability for downstream analytics workflows
+
+The project demonstrates a practical model-quality evaluation workflow similar to those used when assessing LLM-powered product features before deployment.
+
+
 ## Models Evaluated
 
 * Mistral-7B-Instruct
@@ -94,31 +109,64 @@ Model Selection Recommendation
 mistral-vs-zephyr-extraction/
 ├── README.md
 ├── requirements.txt
+│
 ├── data/
-│   ├── sample_ground_truth.csv
-│   └── data_dictionary.md
+│
 ├── inputs/
-│   └── sample_pdfs/
+│
 ├── notebooks/
-│   ├── 01_run_extraction.ipynb
-│   └── 02_benchmark_analysis.ipynb
+│   ├── 01_llm_mistral_7b_clean.ipynb
+│   └── 01_llm_zephyr_7b_clean.ipynb
+│
 ├── outputs/
 │   ├── predictions/
 │   ├── benchmarks/
 │   └── figures/
+│
 ├── reports/
-│   ├── model_quality_report.md
 │   ├── error_analysis.md
 │   └── executive_decision_memo.md
+│
 └── src/
-    ├── config.py
-    ├── text_processing.py
     ├── prompts.py
     ├── parsing.py
-    ├── validation.py
-    ├── llm_loader.py
-    ├── run_extraction.py
-    └── run_evaluation.py
+    └── validation.py
+```
+
+### Repository Components
+
+**notebooks/**
+
+Contains reproducible benchmark notebooks for evaluating Mistral-7B and Zephyr-7B on structured trade-data extraction tasks.
+
+**src/**
+
+Reusable utility modules for:
+
+* prompt templates
+* JSON parsing
+* output validation
+* numeric consistency checking
+
+**reports/**
+
+Contains benchmark interpretation, error analysis, and executive model-selection recommendations.
+
+**outputs/**
+
+Stores generated predictions, benchmark metrics, and visualization outputs.
+
+**inputs/**
+
+Contains sample PDF reports used for public demonstrations.
+
+**data/**
+
+Contains sample ground-truth data and supporting documentation.
+
+```
+```
+
 ```
 
 ## Benchmark Results
@@ -163,12 +211,37 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-Run extraction:
+## How to Run
+
+Install dependencies:
 
 ```bash
-python -m src.run_extraction --model mistral_7b --prompt strict_json
-python -m src.run_extraction --model zephyr_7b --prompt strict_json
+pip install -r requirements.txt
 ```
+
+Open and execute either notebook:
+
+```text
+notebooks/01_llm_mistral_7b_clean.ipynb
+```
+
+or
+
+```text
+notebooks/01_llm_zephyr_7b_clean.ipynb
+```
+
+The notebooks perform:
+
+1. PDF text extraction
+2. OCR fallback processing
+3. Prompt-based structured extraction
+4. JSON parsing and validation
+5. Benchmark comparison against sample ground-truth data
+
+```
+```
+
 
 Run evaluation:
 

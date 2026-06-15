@@ -1,0 +1,9 @@
+metric,zephyr_7b,mistral_7b,better
+exports_mae,9.90,20.07,zephyr_7b
+exports_rmse,25.20,111.32,zephyr_7b
+imports_mae,7.30,16.56,zephyr_7b
+imports_rmse,21.57,93.33,zephyr_7b
+trade_balance_mae,3.93e9,2.70e10,zephyr_7b
+trade_balance_rmse,1.81e10,1.96e11,zephyr_7b
+total_trade_mae,19.85,43.85,zephyr_7b
+total_trade_rmse,51.74,205.66,zephyr_7b

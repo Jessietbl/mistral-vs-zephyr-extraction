@@ -1,5 +1,11 @@
 # LLM Model Quality Evaluation for Structured Trade Data Extraction
 
+An offline evaluation pipeline and C++ validation layer for detecting stale,
+inconsistent, incomplete, and implausible claims in LLM-generated structured outputs.
+
+The framework is demonstrated using time-sensitive Malaysian trade statistics
+extracted from semi-structured reports.
+
 ## Overview
 
 Evaluating Small Language Models for Reliable Structured Data Extraction Under Resource-Constrained Deployment Conditions. 

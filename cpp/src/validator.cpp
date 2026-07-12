@@ -1,187 +1,215 @@
+#include <iostream>
+#include <string>
+
+#include "freshness_policy.h"
+#include "trade_record.h"
+#include "validation_result.h"
 #include "validator.h"
 
-#include <cmath>
-#include <ctime>
-#include <iomanip>
-#include <sstream>
-
 namespace {
-constexpr double kTolerance = 1.0;          // RM billion tolerance
-constexpr double kMaxReasonableTrade = 1000.0; // RM billion
-constexpr int kMaxFreshnessDays = 90;
 
-void addIssue(
-    ValidationResult& result,
-    const std::string& code,
-    const std::string& message,
-    RiskLevel risk_level
-) {
-    result.issues.push_back({code, message, risk_level});
-}
+int g_failures = 0;
+
+void expect(bool condition, const std::string& description) {
+    if (!condition) {
+        std::cerr << "FAILED: " << description << "\n";
+        ++g_failures;
+    } else {
+        std::cout << "ok - " << description << "\n";
+    }
 }
 
-ValidationResult TradeRecordValidator::validate(const TradeRecord& record) const {
-    ValidationResult result;
-    result.accepted = true;
-
-    checkRequiredFields(record, result);
-    checkNonNegativeValues(record, result);
-    checkPlausibleRange(record, result);
-    checkArithmeticConsistency(record, result);
-    checkFreshness(record, result);
-
+bool hasIssue(const ValidationResult& result, const std::string& code) {
     for (const auto& issue : result.issues) {
-        if (issue.risk_level == RiskLevel::High) {
-            result.accepted = false;
-            break;
+        if (issue.code == code) {
+            return true;
         }
     }
-
-    return result;
+    return false;
 }
 
-void TradeRecordValidator::checkRequiredFields(
-    const TradeRecord& record,
-    ValidationResult& result
-) const {
-    if (!record.exports.has_value()) {
-        addIssue(result, "missing_exports", "Exports value is missing.", RiskLevel::High);
-    }
+}  // namespace
 
-    if (!record.imports.has_value()) {
-        addIssue(result, "missing_imports", "Imports value is missing.", RiskLevel::High);
-    }
+void testValidRecordIsAccepted() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = 80.0;
+    record.total_trade = 180.0;
+    record.trade_balance = 20.0;
+    record.source_date = "2026-06-01";
+    record.evaluation_date = "2026-06-15";
 
-    if (!record.total_trade.has_value()) {
-        addIssue(result, "missing_total_trade", "Total trade value is missing.", RiskLevel::Medium);
-    }
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
 
-    if (record.source_date.empty()) {
-        addIssue(result, "missing_source_date", "Source document date is missing.", RiskLevel::High);
-    }
+    expect(result.accepted, "a fully consistent, fresh record is accepted");
+    expect(result.issues.empty(), "a fully consistent, fresh record has no issues");
 }
 
-void TradeRecordValidator::checkNonNegativeValues(
-    const TradeRecord& record,
-    ValidationResult& result
-) const {
-    const std::vector<std::pair<std::string, std::optional<double>>> fields = {
-        {"exports", record.exports},
-        {"imports", record.imports},
-        {"total_trade", record.total_trade}
-    };
+void testMissingRequiredFieldsRejected() {
+    TradeRecord record;
+    record.source_date = "2026-06-01";
+    record.evaluation_date = "2026-06-15";
 
-    for (const auto& [name, value] : fields) {
-        if (value.has_value() && value.value() < 0.0) {
-            addIssue(
-                result,
-                "negative_" + name,
-                name + " cannot be negative.",
-                RiskLevel::High
-            );
-        }
-    }
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
+
+    expect(!result.accepted, "a record missing exports/imports is rejected");
+    expect(hasIssue(result, "missing_exports"), "missing_exports is flagged");
+    expect(hasIssue(result, "missing_imports"), "missing_imports is flagged");
 }
 
-void TradeRecordValidator::checkPlausibleRange(
-    const TradeRecord& record,
-    ValidationResult& result
-) const {
-    const std::vector<std::pair<std::string, std::optional<double>>> fields = {
-        {"exports", record.exports},
-        {"imports", record.imports},
-        {"total_trade", record.total_trade}
-    };
+void testNegativeValueRejected() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = -5.0;
+    record.total_trade = 95.0;
+    record.source_date = "2026-06-01";
+    record.evaluation_date = "2026-06-15";
 
-    for (const auto& [name, value] : fields) {
-        if (value.has_value() && value.value() > kMaxReasonableTrade) {
-            addIssue(
-                result,
-                "implausible_" + name,
-                name + " is outside the expected RM billion range. Possible unit-normalization failure.",
-                RiskLevel::High
-            );
-        }
-    }
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
+
+    expect(!result.accepted, "a negative imports value is rejected");
+    expect(hasIssue(result, "negative_imports"), "negative_imports issue is present");
 }
 
-void TradeRecordValidator::checkArithmeticConsistency(
-    const TradeRecord& record,
-    ValidationResult& result
-) const {
-    if (record.exports.has_value() &&
-        record.imports.has_value() &&
-        record.total_trade.has_value()) {
+void testArithmeticInconsistencyDetected() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = 80.0;
+    record.total_trade = 500.0;  // does not equal exports + imports
+    record.source_date = "2026-06-01";
+    record.evaluation_date = "2026-06-15";
 
-        const double expected_total = record.exports.value() + record.imports.value();
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
 
-        if (std::abs(expected_total - record.total_trade.value()) > kTolerance) {
-            addIssue(
-                result,
-                "total_trade_inconsistent",
-                "exports + imports does not match total_trade.",
-                RiskLevel::High
-            );
-        }
-    }
-
-    if (record.exports.has_value() &&
-        record.imports.has_value() &&
-        record.trade_balance.has_value()) {
-
-        const double expected_balance = record.exports.value() - record.imports.value();
-
-        if (std::abs(expected_balance - record.trade_balance.value()) > kTolerance) {
-            addIssue(
-                result,
-                "trade_balance_inconsistent",
-                "exports - imports does not match trade_balance.",
-                RiskLevel::High
-            );
-        }
-    }
+    expect(!result.accepted, "exports + imports mismatch with total_trade is rejected");
+    expect(hasIssue(result, "total_trade_inconsistent"), "total_trade_inconsistent issue is present");
 }
 
-void TradeRecordValidator::checkFreshness(
-    const TradeRecord& record,
-    ValidationResult& result
-) const {
-    if (record.source_date.empty() || record.evaluation_date.empty()) {
-        return;
-    }
+void testUnitNormalizationFailureDetected() {
+    TradeRecord record;
+    record.exports = 100000.0;  // e.g. RM million mis-parsed at RM billion scale
+    record.imports = 80.0;
+    record.total_trade = 100080.0;
+    record.source_date = "2026-06-01";
+    record.evaluation_date = "2026-06-15";
 
-    const int age_days = daysBetween(record.source_date, record.evaluation_date);
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
 
-    if (age_days > kMaxFreshnessDays) {
-        addIssue(
-            result,
-            "stale_source",
-            "Source document is older than the accepted freshness threshold.",
-            RiskLevel::High
-        );
-    }
+    expect(!result.accepted, "an implausibly large exports value is rejected");
+    expect(hasIssue(result, "implausible_exports"), "implausible_exports issue is present");
 }
 
-int TradeRecordValidator::daysBetween(
-    const std::string& start_date,
-    const std::string& end_date
-) const {
-    std::tm start = {};
-    std::tm end = {};
+void testStaleSourceRejected() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = 80.0;
+    record.total_trade = 180.0;
+    record.source_date = "2026-01-01";
+    record.evaluation_date = "2026-06-15";  // 165 days later, exceeds default 90-day policy
 
-    std::istringstream start_stream(start_date);
-    std::istringstream end_stream(end_date);
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
 
-    start_stream >> std::get_time(&start, "%Y-%m-%d");
-    end_stream >> std::get_time(&end, "%Y-%m-%d");
+    expect(!result.accepted, "a source older than the freshness threshold is rejected");
+    expect(hasIssue(result, "stale_source"), "stale_source issue is present");
+}
 
-    if (start_stream.fail() || end_stream.fail()) {
-        return 0;
+void testFreshnessBoundaryAtExactlyMaxAge() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = 80.0;
+    record.total_trade = 180.0;
+    record.source_date = "2026-03-01";
+    record.evaluation_date = "2026-05-30";  // exactly 90 days later
+
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
+
+    expect(!hasIssue(result, "stale_source"), "a source exactly at the max-age boundary is not flagged stale");
+}
+
+void testFreshnessBoundaryOneDayOverMaxAge() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = 80.0;
+    record.total_trade = 180.0;
+    record.source_date = "2026-03-01";
+    record.evaluation_date = "2026-05-31";  // 91 days later
+
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
+
+    expect(hasIssue(result, "stale_source"), "a source one day past the max-age boundary is flagged stale");
+}
+
+void testFutureDatedSourceRejected() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = 80.0;
+    record.total_trade = 180.0;
+    record.source_date = "2026-07-01";
+    record.evaluation_date = "2026-06-15";  // evaluation date precedes source date
+
+    const TradeRecordValidator validator;
+    const ValidationResult result = validator.validate(record);
+
+    expect(!result.accepted, "a future-dated source is rejected");
+    expect(hasIssue(result, "future_dated_source"), "future_dated_source issue is present");
+}
+
+void testConfigurableFreshnessPolicy() {
+    TradeRecord record;
+    record.exports = 100.0;
+    record.imports = 80.0;
+    record.total_trade = 180.0;
+    record.source_date = "2026-01-01";
+    record.evaluation_date = "2026-06-15";  // 165 days later
+
+    FreshnessPolicy lenient_policy;
+    lenient_policy.maximum_age_days = 365;
+
+    const TradeRecordValidator validator(lenient_policy);
+    const ValidationResult result = validator.validate(record);
+
+    expect(!hasIssue(result, "stale_source"),
+           "a lenient freshness policy accepts a source the default policy would reject");
+}
+
+void testDaysBetweenDatesIsCalendarCorrect() {
+    const auto days = daysBetweenDates("2026-01-01", "2026-03-01");
+    expect(days.has_value() && *days == 59,
+           "daysBetweenDates computes calendar-correct day counts (Jan 1 -> Mar 1, 2026 = 59 days)");
+}
+
+void testUnparseableDateReturnsNullopt() {
+    const auto days = daysBetweenDates("2026-13-01", "2026-06-15");
+    expect(!days.has_value(), "an invalid month is rejected by the date parser rather than silently miscomputed");
+}
+
+int main() {
+    testValidRecordIsAccepted();
+    testMissingRequiredFieldsRejected();
+    testNegativeValueRejected();
+    testArithmeticInconsistencyDetected();
+    testUnitNormalizationFailureDetected();
+    testStaleSourceRejected();
+    testFreshnessBoundaryAtExactlyMaxAge();
+    testFreshnessBoundaryOneDayOverMaxAge();
+    testFutureDatedSourceRejected();
+    testConfigurableFreshnessPolicy();
+    testDaysBetweenDatesIsCalendarCorrect();
+    testUnparseableDateReturnsNullopt();
+
+    if (g_failures > 0) {
+        std::cerr << g_failures << " test(s) failed.\n";
+        return 1;
     }
 
-    const std::time_t start_time = std::mktime(&start);
-    const std::time_t end_time = std::mktime(&end);
-
-    const double seconds = std::difftime(end_time, start_time);
-    return static_cast<int>(seconds / (60 * 60 * 24));
+    std::cout << "All tests passed.\n";
+    return 0;
 }

@@ -18,7 +18,7 @@ The evaluation focuses on:
 * logical consistency of extracted values
 * suitability for downstream analytics workflows
 
-Evaluated four deployable open-source models under a strict
+Evaluated two deployable open-source models under a strict
 single-GPU Colab budget.
 
 Investigated:
@@ -190,7 +190,7 @@ Contains sample ground-truth data and supporting documentation.
 
 ## Benchmark Results
 
-The table below reports raw extraction performance before outlier filtering or quality-gating. Values are in RM billion.
+The table below reports raw extraction performance before outlier filtering or quality-gating. The extremely large values indicate pipeline-level unit-normalization failures in which raw ringgit values were interpreted as RM billions. They are retained to demonstrate the severity of ungated extraction failures.
 
 | Metric | Zephyr-7B | Mistral-7B | Better |
 |---|---:|---:|---|
@@ -237,14 +237,6 @@ The final model recommendation is based on the product priority:
 * choose the model with lower numeric error when factual precision matters most
 * choose the model with higher JSON validity when pipeline reliability matters most
 * use logical validation and confidence scoring to route uncertain outputs for human review
-
-## How to Run
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
 
 ## How to Run
 
